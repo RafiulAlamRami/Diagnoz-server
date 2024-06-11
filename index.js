@@ -36,6 +36,7 @@ async function run() {
 
 
     const userCollection = client.db("diagnozdb").collection("users");
+    const testCollection = client.db("diagnozdb").collection("tests");
 
     // ------ bd geo location api start-------------
 
@@ -157,6 +158,13 @@ async function run() {
       }
     }
     const result = await userCollection.updateOne(filter, updateDoc)
+    res.send(result)
+  })
+
+   // add new test api
+   app.post('/addtest',verifyToken,verifyAdmin,async(req,res)=>{
+    const newTest=req.body
+    const result=await testCollection.insertOne(newTest)
     res.send(result)
   })
 
