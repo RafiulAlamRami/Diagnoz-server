@@ -197,6 +197,14 @@ async function run() {
 
 // -----user api end-----
 
+// ----------get all test api start----------
+
+app.get('/alltest',verifyToken,async(req,res)=>{
+  const result = await testCollection.find().toArray()
+  res.send(result)
+})
+
+// ----------get all test api end----------
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
