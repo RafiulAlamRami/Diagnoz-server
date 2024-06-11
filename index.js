@@ -128,11 +128,26 @@ async function run() {
   })
 
     // get all users
-  app.get('/users',verifyToken, async (req, res) => {
+  app.get('/users',verifyToken,verifyAdmin, async (req, res) => {
     // console.log(req.headers);
     const result = await userCollection.find().toArray()
     res.send(result)
   })
+
+    // change user status active
+  app.patch('/user-active/:id',verifyToken,verifyAdmin, async (req, res) => {
+    const id = req.params.id
+    const filter = { _id:new ObjectId(id) }
+    const updateDoc = {
+      $set: {
+        status: 'active'
+      }
+    }
+    const result = await userCollection.updateOne(filter, updateDoc)
+    res.send(result)
+  })
+
+   
 
 
   // -----admin api end-----
@@ -150,6 +165,14 @@ async function run() {
       }
       const result = await userCollection.insertOne(user)
       res.send(result)
+    })
+
+      //get single user by email for status check in authprovider
+    app.get('/user/:email',async(req,res)=>{
+      const email=req.params.email
+      const query={email:email}
+      const result=await userCollection.findOne(query)
+      res.send(result) 
     })
 
 
