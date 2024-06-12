@@ -199,11 +199,20 @@ async function run() {
 
 // ----------get all test api start----------
 
+    //get all test api
 app.get('/alltest',verifyToken,async(req,res)=>{
   const result = await testCollection.find().toArray()
   res.send(result)
 })
 
+    // get single test api by id
+  
+  app.get('/test-details/:id',async(req,res)=>{
+    const id=req.params.id
+    const query={_id:new ObjectId(id)}
+    const result=await testCollection.findOne(query)
+    res.send(result) 
+  })
 // ----------get all test api end----------
 
     await client.db("admin").command({ ping: 1 });
