@@ -3,7 +3,7 @@ const app = express()
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
-// const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY)
+const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY)
 const port = process.env.PORT || 5000
 
 // middleware
@@ -37,6 +37,7 @@ async function run() {
 
     const userCollection = client.db("diagnozdb").collection("users");
     const testCollection = client.db("diagnozdb").collection("tests");
+    const paymentCollection=client.db("diagnozdb").collection("payments")
 
     // ------ bd geo location api start-------------
 
@@ -197,7 +198,7 @@ async function run() {
 
 // -----user api end-----
 
-// ----------get all test api start----------
+// ----------get  test api start----------
 
     //get all test api
 app.get('/alltest',verifyToken,async(req,res)=>{
@@ -214,6 +215,68 @@ app.get('/alltest',verifyToken,async(req,res)=>{
     res.send(result) 
   })
 // ----------get all test api end----------
+
+// ---------- slot api start----------
+
+  //get slot by single test id
+app.patch('/test-slot/:id',async(req,res)=>{
+  const id=req.params.id
+  const query={_id:new ObjectId(id)}
+  const test=await testCollection.findOne(query)
+  const newslot=test.slot-1
+  
+  const updateDoc = {
+    $set: {
+      slot: newslot
+    }
+  } 
+  
+  result = await testCollection.updateOne(query, updateDoc)
+  
+  
+  // const result = await testCollection.updateOne(query, updateDoc)
+  // const uptest=await testCollection.findOne(query)
+  // const r=uptest.slot
+  res.send(result)
+
+})
+
+
+// ----------slot  api end----------
+
+
+// --------stripe api--------
+
+app.post("/create-payment-intent", async (req, res) => {
+  const { price } = req.body;
+  const amount=parseInt(price*100)
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount,
+    currency: "usd",
+    // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+    payment_method_types: ['card']
+  });
+
+  res.send({
+    clientSecret: paymentIntent.client_secret
+  });
+
+})
+
+// ------payment related api--------
+
+app.post('/payments',async(req,res)=>{
+  const payment=req.body
+  const paymentResult=await paymentCollection.insertOne(payment)
+  res.send(paymentResult)
+})
+
+
+
+
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
