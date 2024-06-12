@@ -247,7 +247,22 @@ app.patch('/test-slot/:id',async(req,res)=>{
 
 // --------stripe api--------
 
+app.post("/create-payment-intent", async (req, res) => {
+  const { price } = req.body;
+  const amount=parseInt(price*100)
 
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount,
+    currency: "usd",
+    // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+    payment_method_types: ['card']
+  });
+
+  res.send({
+    clientSecret: paymentIntent.client_secret
+  });
+
+})
 
 // ------payment related api--------
 
