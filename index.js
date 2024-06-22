@@ -28,18 +28,22 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
 
     const upazilaCollection=client.db("diagnozdb").collection("upazila");
     const districtCollection=client.db("diagnozdb").collection("district");
+    const commingTestCollection=client.db("diagnozdb").collection("commingTest");
+    const healthTipsCollection=client.db("diagnozdb").collection("helthTips");
 
 
     const userCollection = client.db("diagnozdb").collection("users");
     const testCollection = client.db("diagnozdb").collection("tests");
-    const paymentCollection=client.db("diagnozdb").collection("payments")
+    const paymentCollection=client.db("diagnozdb").collection("payments");
+    const bannerCollection=client.db("diagnozdb").collection("banners");
+    
 
-    // ------ bd geo location api start-------------
+    // ------ general api start-------------
 
       // upozila api
       app.get('/upazila',async(req,res)=>{
@@ -52,8 +56,20 @@ async function run() {
         const result=await districtCollection.find().toArray()
         res.send(result)
       }) 
+
+        // commingTest api
+      app.get('/commingTest',async(req,res)=>{
+        const result=await commingTestCollection.find().toArray()
+        res.send(result)
+      }) 
+
+        // healthTips api
+      app.get('/healthTips',async(req,res)=>{
+        const result=await healthTipsCollection.find().toArray()
+        res.send(result)
+      }) 
   
-    // ------ bd geo location api end-------------
+    // ------ general api end-------------
 
     // -----jwt related api start-----
 
@@ -169,6 +185,112 @@ async function run() {
     res.send(result)
   })
 
+    // cancel a booking by (user) payment id
+  app.delete('/test/:id',verifyToken, async (req, res) => {
+    const id = req.params.id
+    const query = { _id: new ObjectId(id)}
+    const result = await testCollection.deleteOne(query)
+    res.send(result)
+  })
+
+    // get single test by id also use in reswevation-test-admin-dashboard
+  app.get('/test-allTest/:id',verifyToken,verifyAdmin, async (req, res) => {
+    const id = req.params.id
+    const query = { _id: new ObjectId(id)}
+    const result = await testCollection.findOne(query)
+    res.send(result)
+  })
+
+   // update test database
+   app.patch('/updateTest',verifyToken,verifyAdmin,async (req, res) => {
+    const test = req.body
+    const query = { _id: new ObjectId(test.id) }
+    const updateDoc = {
+      $set: {
+      
+        name:test.name,
+        image:test.image,
+        shortDes:test.shortDes,
+        longDes:test.longDes,
+        price:test.price,
+        slot:test.slot,
+        date:test.date,
+        month:test.month,
+        year:test.year,
+      }
+    }
+    const result = await testCollection.updateOne(query, updateDoc)
+
+    res.send(result)
+  })
+
+    // add new banner api
+   app.post('/addbanner',verifyToken,verifyAdmin,async(req,res)=>{
+    const newBanner=req.body
+    const result=await bannerCollection.insertOne(newBanner)
+    res.send(result)
+  })
+
+    // get all banner api
+  app.get('/banner',verifyToken,verifyAdmin, async (req, res) => {
+    // console.log(req.headers);
+    const result = await bannerCollection.find().toArray()
+    res.send(result)
+  })
+
+  
+    // delete a banner
+  app.delete('/banner/:id',verifyToken,verifyAdmin, async (req, res) => {
+    const id = req.params.id
+    const query = { _id: new ObjectId(id) }
+    const result = await bannerCollection.deleteOne(query)
+    res.send(result)
+  })
+
+  // change Banner status active
+  app.patch('/banner-active/:id',verifyToken,verifyAdmin, async (req, res) => {
+
+    const banner=await bannerCollection.find().toArray()
+    const updateD = {
+      $set: {
+        isActive: 'false'
+      }
+    }
+    const resul = await bannerCollection.updateMany({}, updateD)
+
+
+    const id = req.params.id
+    const filter = { _id:new ObjectId(id) }
+    const updateDoc = {
+      $set: {
+        isActive: 'true'
+      }
+    }
+    const result = await bannerCollection.updateOne(filter, updateDoc)
+    res.send(result)
+  })
+
+   // change Banner status block
+   app.patch('/banner-block/:id',verifyToken,verifyAdmin, async (req, res) => {
+
+    const id = req.params.id
+    const filter = { _id:new ObjectId(id) }
+    const updateDoc = {
+      $set: {
+        isActive: 'false'
+      }
+    }
+    const result = await bannerCollection.updateOne(filter, updateDoc)
+    res.send(result)
+  })
+
+    // get home banner api
+  app.get('/banner-home', async (req, res) => {
+    const query={isActive:'true'}
+    const result = await bannerCollection.findOne(query)
+    res.send(result)
+  })
+
 
   // -----admin api end-----
 
@@ -187,13 +309,45 @@ async function run() {
       res.send(result)
     })
 
-      //get single user by email for status check in authprovider
+      //get single user by email for status check in authprovider also in user Profile
       app.get('/user/:email',async(req,res)=>{
         const email=req.params.email
         const query={email:email}
         const result=await userCollection.findOne(query)
         res.send(result) 
       })
+
+
+      // update user info in database
+    app.patch('/up-user',verifyToken, async (req, res) => {
+      const user = req.body
+      const query = { email: user.email }
+      const updateDoc = {
+        $set: {
+        
+          name:user.name,
+          district:user.district,
+          upazila:user.upazila,
+          bloodGroup:user.bloodGroup,
+        }
+      }
+      const result = await userCollection.updateOne(query, updateDoc)
+
+      res.send(result)
+    })
+
+
+    // upozila profile update api
+    app.get('/upazila-user',verifyToken,async(req,res)=>{
+      const result=await upazilaCollection.find().toArray()
+      res.send(result)
+    }) 
+
+      // district profile update api
+    app.get('/district-user',verifyToken,async(req,res)=>{
+      const result=await districtCollection.find().toArray()
+      res.send(result)
+    })
 
 
 // -----user api end-----
@@ -208,18 +362,20 @@ app.get('/alltest',verifyToken,async(req,res)=>{
 
     // get single test api by id
   
-  app.get('/test-details/:id',async(req,res)=>{
+  app.get('/test-details/:id',verifyToken,async(req,res)=>{
     const id=req.params.id
     const query={_id:new ObjectId(id)}
     const result=await testCollection.findOne(query)
     res.send(result) 
   })
+
+
 // ----------get all test api end----------
 
 // ---------- slot api start----------
 
   //get slot by single test id
-app.patch('/test-slot/:id',async(req,res)=>{
+app.patch('/test-slot/:id',verifyToken,async(req,res)=>{
   const id=req.params.id
   const query={_id:new ObjectId(id)}
   const test=await testCollection.findOne(query)
@@ -242,12 +398,36 @@ app.patch('/test-slot/:id',async(req,res)=>{
 })
 
 
+  //get slot by single test id (when cancel)
+  app.patch('/test-slot-cancel/:id',verifyToken,async(req,res)=>{
+    const id=req.params.id
+    const query={_id:new ObjectId(id)}
+    const test=await testCollection.findOne(query)
+    const newslot=test.slot+1
+    
+    const updateDoc = {
+      $set: {
+        slot: newslot
+      }
+    } 
+    
+    const result = await testCollection.updateOne(query, updateDoc)
+    
+    // console.log(newslot);
+    // const result = await testCollection.updateOne(query, updateDoc)
+    // const uptest=await testCollection.findOne(query)
+    // const r=uptest.slot
+    res.send(result)
+  
+  })
+
+
 // ----------slot  api end----------
 
 
 // --------stripe api--------
 
-app.post("/create-payment-intent", async (req, res) => {
+app.post("/create-payment-intent",verifyToken, async (req, res) => {
   const { price } = req.body;
   const amount=parseInt(price*100)
 
@@ -266,20 +446,156 @@ app.post("/create-payment-intent", async (req, res) => {
 
 // ------payment related api--------
 
-app.post('/payments',async(req,res)=>{
+  //get all payments by condition
+app.post('/payments',verifyToken,async(req,res)=>{
   const payment=req.body
   const paymentResult=await paymentCollection.insertOne(payment)
   res.send(paymentResult)
 })
 
 
+  //get all payment featured test
+app.get('/featured-test',async(req,res)=>{
+  const payTests=await paymentCollection.find().toArray()
+  
+  let testI=[]
+  payTests.map(test=>testI.push(test.testId))
+
+  const query={_id:{
+    $in:testI.map(id=>new ObjectId(id))
+  }}
+
+  const result=await testCollection.find(query).toArray()
+
+  // res.send(testI)
+  res.send(result)
+})
+
+//get all booked test by user email also use in admin all user see info
+app.get('/payment-test/:email',verifyToken,async(req,res)=>{
+
+  const email=req.params.email
+  const query={email:email}
+  const result=await paymentCollection.find(query).toArray()
+  res.send(result)
+})
+
+  //for user upcomming appoinment
+app.get('/payment-test-up/:email',verifyToken,async(req,res)=>{
+
+  const email=req.params.email
+  const query={email:email,status:'Pending'}
+  const result=await paymentCollection.find(query).toArray()
+  res.send(result)
+})
+
+//search user email  use in admin allTest- reservetion search by email
+app.get('/payment-test-search/:id/:email',verifyToken,verifyAdmin,async(req,res)=>{
+  const id=req.params.id
+  const email=req.params.email
+  const query={testId:id,email:email}
+  const result=await paymentCollection.find(query).toArray()
+  res.send(result)
+})
+
+  // cancel a booking by (user) payment id --------- cancel korle slot baraite hobe------------------------
+app.delete('/payment-trId/:id',verifyToken, async (req, res) => {
+  const id = req.params.id
+  const query = { transactionId: id}
+  const result = await paymentCollection.deleteOne(query)
+  res.send(result)
+})
+
+
+//search-test by date
+app.get('/search-test/:date/:month/:year',verifyToken,async(req,res)=>{
+  const date=req.params.date
+  const month=req.params.month
+  const year=req.params.year
+  // console.log(typeof date);
+  const query={date:parseInt(date ),month:parseInt(month),year:parseInt(year)}
+  const result=await testCollection.find(query).toArray()
+  res.send(result)
+})
+
+// get all reservation under a test api
+app.get('/all-reservetion-for-a-test/:id',verifyToken,verifyAdmin, async (req, res) => {
+  const id=req.params.id
+  const query={testId:id}
+  const result = await paymentCollection.find(query).toArray()
+  res.send(result)
+})
+
+ // cancel a reservetion  paymentid ---------cancel korle slot barbe-----------------------------
+ app.delete('/paymen-reservetion/:id',verifyToken,verifyAdmin, async (req, res) => {
+  const id = req.params.id
+  const query = { _id: new ObjectId(id)}
+  const result = await paymentCollection.deleteOne(query)
+  res.send(result)
+})
+
+
+  //Delivery report status api 
+  app.patch('/delivery-report/:id/:trId/:email',verifyToken,verifyAdmin, async (req, res) => {
+    const testId = req.params.id
+    const trId = req.params.trId
+    const email = req.params.email
+    // console.log(testId,trId,email);
+    const report=req.body
+    const filter = { testId:testId,transactionId:trId,email:email }
+    const updateDoc = {
+      $set: {
+        status: 'Delivered',
+        report:report.report,
+      }
+    }
+    const result = await paymentCollection.updateOne(filter, updateDoc)
+    res.send(result)
+  })
+
+
+  //a user find delivery report 
+app.get('/delivery-test-report/:email',verifyToken,async(req,res)=>{
+  const email=req.params.email
+  
+
+  
+  const status='Delivered'
+  // console.log(typeof date);
+  const query={email:email,status:status}
+  const result=await paymentCollection.find(query).toArray()
+  res.send(result)
+})
+
+
+  //chart for pending 
+  app.get('/delivery-pending/',async(req,res)=>{
+    
+    const status='Pending'
+    // console.log(typeof date);
+    const query={status:status}
+    const result=await paymentCollection.find(query).toArray()
+    res.send(result)
+  })
+
+  //chart for delivered 
+  app.get('/delivery-delivered/',async(req,res)=>{
+    
+    const status='Delivered'
+    // console.log(typeof date);
+    const query={status:status}
+    const result=await paymentCollection.find(query).toArray()
+    res.send(result)
+  })
 
 
 
 
 
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
