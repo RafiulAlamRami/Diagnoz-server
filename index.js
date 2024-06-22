@@ -605,9 +605,9 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-  res.send('Bistro is running')
+  res.send('Diagnoz is running')
 })
 
 app.listen(port, () => {
-  console.log(`bistro is running from ${port} port`);
+  console.log(`Diagnoz is running from ${port} port`);
 })
